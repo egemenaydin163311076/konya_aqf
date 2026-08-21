@@ -1,0 +1,11 @@
+sampiyon,R2_test,R2_persistence,MAE,n_test,WHO_esik,WHO_acc,WHO_precision,WHO_recall,WHO_F1,asim_taban_orani,TP,FP,TN,FN,istasyon,kirletici
+persistence,0.47,0.47,19.94,472,45.0,0.735,0.724,0.721,0.723,0.479,163.0,62.0,184.0,63.0,Karkent,PM10
+gbm_delta,0.331,0.325,2.38,467,40.0,1.0,,,,0.0,0.0,0.0,467.0,0.0,Karkent,SO2
+gbm_delta,0.73,0.71,12.92,468,25.0,0.865,0.896,0.92,0.908,0.72,310.0,36.0,95.0,27.0,Karkent,NO2
+gbm_delta,0.672,0.645,29.61,468,,,,,,,,,,,Karkent,NOX
+persistence,0.591,0.591,17.41,468,,,,,,,,,,,Karkent,NO
+gbm_delta,0.34,0.32,13.27,443,45.0,0.77,0.627,0.697,0.66,0.321,99.0,59.0,242.0,43.0,Meram,PM10
+persistence,0.726,0.726,3.38,453,40.0,0.934,0.681,0.681,0.681,0.104,32.0,15.0,391.0,15.0,Meram,SO2
+gbm_delta,0.556,0.537,11.6,379,25.0,0.871,0.916,0.94,0.928,0.884,315.0,29.0,15.0,20.0,Meram,NO2
+gbm_delta,0.553,0.512,24.2,379,,,,,,,,,,,Meram,NOX
+gbm_delta,0.535,0.506,13.61,379,,,,,,,,,,,Meram,NO

@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Local raw workbook; the smaller CSV data source remains trackable.
+data/*.xlsx
+
+# Local editor and OS files.
+.vscode/
+.DS_Store
+Thumbs.db

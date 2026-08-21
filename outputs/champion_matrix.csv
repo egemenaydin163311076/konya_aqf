@@ -1,0 +1,6 @@
+hedef,t+1,t+6,t+24,gunluk,haftalik,aylik
+karkent_pm10,gbm_delta (0.92),gbm_delta (0.55),ridge_lags (0.27),ridge_lags (0.55),seasonal_naive (0.23),seasonal_naive (0.37)
+karkent_so2,gbm_delta (0.43),gbm_level (0.21),ridge_lags (0.17),ridge_lags (0.46),gbm_level (0.01),gbm_level (-0.85)
+meram_co,gbm_delta (0.83),gbm_level (0.4),ridge_lags (0.27),ridge_lags (0.57),ridge_lags (0.25),gbm_level (-0.34)
+meram_pm10,gbm_delta (0.6),gbm_level (0.32),gbm_level (0.15),gbm_level (0.42),seasonal_naive (-0.12),seasonal_naive (-0.4)
+meram_so2,persistence (0.82),ridge_lags (0.5),ridge_lags (0.37),ridge_lags (0.62),ridge_lags (0.02),ridge_lags (-1.78)

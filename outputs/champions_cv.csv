@@ -1,0 +1,11 @@
+hedef,ufuk,sampiyon,CV_R2,R2_test,MAE_test,n_fold
+karkent_pm10,haftalik,ridge_lags,0.1387,0.2842,18.39,3
+karkent_pm10,aylik,seasonal_naive,0.3448,0.3787,12.879,3
+meram_pm10,haftalik,seasonal_naive,-1.4058,-0.0145,13.094,2
+meram_pm10,aylik,seasonal_naive,-3.781,-0.2132,9.755,2
+meram_co,haftalik,ridge_lags,0.4629,0.5172,208.478,3
+meram_co,aylik,ridge_lags,0.6927,0.5173,176.825,3
+karkent_so2,haftalik,ridge_lags,0.2883,0.1827,2.038,3
+karkent_so2,aylik,ridge_lags,0.0649,0.2772,1.558,3
+meram_so2,haftalik,ridge_lags,0.2685,0.0898,8.026,2
+meram_so2,aylik,ridge_lags,0.1352,-1.4611,12.244,2

@@ -1,0 +1,11 @@
+hedef,model,R2_val_saatlik,R2_saatlik,R2_gunluk,R2_haftalik,R2_aylik,MAE,n_ay
+karkent_pm10,nowcast_gbm,0.825,0.923,0.972,0.966,0.961,7.73,16
+karkent_pm10,nowcast_ridge,0.809,0.901,0.961,0.947,0.931,9.41,16
+karkent_so2,nowcast_gbm,0.16,0.478,0.783,0.7,0.622,2.87,16
+karkent_so2,nowcast_ridge,0.415,0.482,0.909,0.898,0.878,2.61,16
+meram_pm10,nowcast_gbm,0.541,0.659,0.903,0.863,0.813,10.63,16
+meram_pm10,nowcast_ridge,0.508,0.583,0.781,0.505,0.217,13.83,16
+meram_so2,nowcast_gbm,0.845,0.785,0.95,0.963,0.97,3.37,16
+meram_so2,nowcast_ridge,0.865,0.778,0.943,0.961,0.961,3.98,16
+meram_co,nowcast_gbm,0.831,0.856,0.935,0.929,0.935,138.96,16
+meram_co,nowcast_ridge,0.797,0.859,0.967,0.972,0.977,145.57,16
