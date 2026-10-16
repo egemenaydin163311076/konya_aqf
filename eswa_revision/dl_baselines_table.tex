@@ -1,0 +1,11 @@
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Model} & \textbf{Karkent PM10, next hour} & \textbf{Karkent PM10, daily} & \textbf{Meram PM10, next hour} & \textbf{Meram PM10, daily} \\
+\midrule
+Persistence & 0.873$^{\mathrm{a}}$ & 0.251$^{\mathrm{a}}$ & 0.586$^{\mathrm{a}}$ & -0.411$^{\mathrm{a}}$ \\
+Ridge regression & 0.781$^{\mathrm{a}}$ & 0.613 & 0.517$^{\mathrm{a}}$ & 0.469 \\
+Selected champion (framework) & 0.921 & 0.613 & 0.616 & 0.453 \\
+MLP (scikit-learn) & 0.932$\pm$0.001$^{\mathrm{b}}$ & 0.520$\pm$0.013 & 0.723$\pm$0.005$^{\mathrm{b}}$ & 0.194$\pm$0.030 \\
+DLinear-style ridge & 0.925$\pm$0.000 & 0.645$\pm$0.000$^{\mathrm{b}}$ & 0.729$\pm$0.000$^{\mathrm{b}}$ & 0.510$\pm$0.000 \\
+\bottomrule
+\end{tabular}

@@ -1,0 +1,8 @@
+scenario,hedef,ufuk,champ_orig,test_orig,champ_purged,test_purged
+operational,karkent_pm10,t+24,gbm_level,0.504,gbm_level,0.4964
+operational,karkent_pm10,gunluk,gbm_level,0.7048,gbm_level,0.6986
+operational,karkent_so2,t+24,gbm_level,0.2791,gbm_level,0.2681
+operational,meram_pm10,t+24,gbm_level,0.2902,gbm_level,0.2792
+operational,meram_pm10,gunluk,gbm_level,0.5262,gbm_level,0.5167
+operational,meram_co,t+6,gbm_level,0.5039,gbm_level,0.5118
+operational,meram_so2,t+24,ridge_lags,0.1017,ridge_lags,0.1007
