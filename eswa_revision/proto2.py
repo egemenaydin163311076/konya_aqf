@@ -13,6 +13,7 @@ from src.targets import make_target
 from src.models import candidates
 
 CSV = C.DATA_PATH.parent / 'konya_clean_2stations.csv'
+PURGE = True   # False only for the purge sensitivity comparison (--no-purge)
 CV_FOLDS = [(2021, 2022), (2022, 2023), (2023, 2024)]
 CAL = ['hour_sin', 'hour_cos', 'dow_sin', 'dow_cos', 'month_sin', 'month_cos', 'year']
 
@@ -41,7 +42,7 @@ def raw_series():
     else:
         d = pd.read_csv(CSV, parse_dates=['ts']).drop_duplicates('ts').set_index('ts').sort_index()
         d = d.reindex(pd.date_range(d.index.min(), d.index.max(), freq='h')).rename_axis('ts')
-        _RAW = (d[list(C.SERIES_MAP)].copy(), d[CAL].copy(), 'csv')
+        _RAW = (d[list(C.SERIES_MAP)].copy(), d[CAL].copy(), 'csv')   # stored series: already clipped, see README
     return _RAW
 
 _PREP = {}
@@ -65,7 +66,7 @@ def prepare_period(end_year, excl=True):
     for c in cal.columns:
         clean[c] = cal[c]
     imp = impute_all(clean, stat)
-    _PREP[key] = dict(clean=clean, imp=imp, bad=bad_all, idx=idx, yr=yr)
+    _PREP[key] = dict(clean=clean, imp=imp, bad=bad_all, idx=idx, yr=yr, raw=raw, src=_)
     return _PREP[key]
 
 def _r2(pred, y, m):
@@ -77,19 +78,20 @@ def run_cell(T, hname, kind, param, meteo=None, folds=CV_FOLDS, return_pred=Fals
         yr = P['yr']; pos = np.arange(len(yr))
         end_pos = pos[yr <= end_year].max()
         ok = X.notna().all(axis=1)
-        m = (yr <= end_year) & ~np.isin(yr, P['bad'][T]) & ok & y.notna() & (pos + param <= end_pos)
+        m = (yr <= end_year) & ~np.isin(yr, P['bad'][T]) & ok & y.notna() & ((pos + param <= end_pos) | (not PURGE))
         return m, ok
     scores = {}; models = {m.name: m for m in candidates(kind, param)}
     for te, va in folds:
         P = prepare_period(te)
         X = build_features(P['imp'], P['clean'], T, meteo_feats=meteo, kind=kind, param=param)
         y = make_target(P['clean'][T], kind, param); anchor = P['clean'][T].fillna(P['imp'][T])
+        y_ev = make_target(P['raw'][T], kind, param); anchor_ev = P['raw'][T].fillna(P['imp'][T])
         fm, ok = fitmask(P, X, y, te)
         if fm.sum() < 500: continue
         for name, mdl in models.items():
-            ctx = dict(X=X, y=y, anchor=anchor, fit_mask=fm, index=P['idx'], clean=P['clean'],
+            ctx = dict(X=X, y=y, anchor=anchor, anchor_raw=anchor_ev, fit_mask=fm, index=P['idx'], clean=P['clean'],
                        imp=P['imp'], target=T, kind=kind, param=param)
-            try: r = _r2(mdl.fit_predict(ctx), y, (P['yr'] == va) & ok)
+            try: r = _r2(mdl.fit_predict(ctx), y_ev, (P['yr'] == va) & ok)
             except Exception: r = np.nan
             if r == r: scores.setdefault(name, []).append(r)
     cv = {k: float(np.mean(v)) for k, v in scores.items()}
@@ -97,16 +99,19 @@ def run_cell(T, hname, kind, param, meteo=None, folds=CV_FOLDS, return_pred=Fals
     P = prepare_period(C.VAL_YEAR)
     X = build_features(P['imp'], P['clean'], T, meteo_feats=meteo, kind=kind, param=param)
     y = make_target(P['clean'][T], kind, param); anchor = P['clean'][T].fillna(P['imp'][T])
+    y_ev = make_target(P['raw'][T], kind, param); anchor_ev = P['raw'][T].fillna(P['imp'][T])
     fm, ok = fitmask(P, X, y, C.VAL_YEAR)
-    ctx = dict(X=X, y=y, anchor=anchor, fit_mask=fm, index=P['idx'], clean=P['clean'],
+    ctx = dict(X=X, y=y, anchor=anchor, anchor_raw=anchor_ev, fit_mask=fm, index=P['idx'], clean=P['clean'],
                imp=P['imp'], target=T, kind=kind, param=param)
     pred = models[champ].fit_predict(ctx)
-    tm = (P['yr'] >= C.TEST_FROM) & ok & y.notna() & pred.notna()
+    tm = (P['yr'] >= C.TEST_FROM) & ok & y_ev.notna() & pred.notna()
     out = dict(hedef=T, ufuk=hname, sampiyon=champ, CV_R2=round(cv[champ], 4),
-               R2_test=round(r2_score(y[tm], pred[tm]), 4), MAE_test=round(mean_absolute_error(y[tm], pred[tm]), 3),
-               R2_persist=round(r2_score(y[tm], anchor[tm]), 4), n_test=int(tm.sum()))
+               R2_test=round(r2_score(y_ev[tm], pred[tm]), 4), MAE_test=round(mean_absolute_error(y_ev[tm], pred[tm]), 3),
+               R2_persist=round(r2_score(y_ev[tm], anchor_ev[tm]), 4), n_test=int(tm.sum()), target_src=P['src'])
     if return_pred:
-        out['pred'] = pred; out['fit_mask'] = fm; out['y'] = y; out['test_mask'] = tm; out['anchor'] = anchor; out['ctx_ok'] = ok
+        # 'y' and 'anchor' are the evaluation (raw) target and last observation; 'y_fit' is the series used for fitting
+        out['pred'] = pred; out['fit_mask'] = fm; out['y'] = y_ev; out['y_fit'] = y; out['test_mask'] = tm
+        out['anchor'] = anchor_ev; out['anchor_fit'] = anchor; out['ctx_ok'] = ok
     return out
 
 def _work(args):
@@ -124,7 +129,12 @@ def _work(args):
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser(); ap.add_argument('--scen', default='baseline'); ap.add_argument('--workers', type=int, default=2)
+    ap.add_argument('--no-purge', action='store_true', help='keep training rows whose target window crosses the training boundary')
     a = ap.parse_args()
+    PURGE = not a.no_purge
+    if raw_series()[2] == 'csv':
+        print('WARNING: the stored series is already clipped; evaluation targets are NOT raw. Provide the raw xlsx (config.DATA_PATH) for raw-target evaluation.', flush=True)
+    tag = 'nopurge_' if a.no_purge else 'proto2_'
     from multiprocessing import Pool
     H = {h[0]: h for h in C.HORIZONS}
     if a.scen == 'baseline':
@@ -135,4 +145,4 @@ if __name__ == '__main__':
     C.OUTPUT_DIR.mkdir(exist_ok=True)
     with Pool(a.workers) as pool:
         res = pool.map(_work, tasks, chunksize=1)
-    pd.DataFrame(res).to_csv(C.OUTPUT_DIR / f'proto2_{a.scen}.csv', index=False)
+    pd.DataFrame(res).to_csv(C.OUTPUT_DIR / f'{tag}{a.scen}.csv', index=False)

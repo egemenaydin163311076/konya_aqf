@@ -25,7 +25,7 @@ except Exception:
 class Persistence:
     name = 'persistence'
     def fit_predict(self, ctx):
-        return ctx['anchor'].copy()          # son değeri taşı
+        return ctx.get('anchor_raw', ctx['anchor']).copy()   # son gözlenen (ham) değeri taşı
 
 
 class SeasonalNaive:

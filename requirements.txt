@@ -1,6 +1,8 @@
-pandas>=2.0
-numpy>=1.24
-scikit-learn>=1.3
-openpyxl>=3.1
-# Opsiyonel — kuruluysa GBM otomatik LightGBM'e geçer (genelde sklearn'den daha hızlı/güçlü)
-lightgbm>=4.0
+# Environment used for the results reported in the manuscript (Python 3.13).
+# LightGBM and XGBoost are deliberately NOT listed: src/models.py adds them to the
+# model pool automatically when they are installed, which changes the reported results.
+pandas==3.0.5
+numpy==2.5.3
+scikit-learn==1.9.1
+scipy==1.18.1
+openpyxl==3.1.5

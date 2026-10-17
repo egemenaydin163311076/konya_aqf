@@ -11,6 +11,7 @@ def final_r2(T, hname, kind, param, model_name, excl=True):
     P = P2.prepare_period(C.VAL_YEAR, excl)
     X = build_features(P['imp'], P['clean'], T)
     y = make_target(P['clean'][T], kind, param); anchor = P['clean'][T].fillna(P['imp'][T])
+    y_ev = make_target(P['raw'][T], kind, param)
     yr = P['yr']; pos = np.arange(len(yr)); end_pos = pos[yr <= C.VAL_YEAR].max()
     ok = X.notna().all(axis=1)
     fm = (yr <= C.VAL_YEAR) & ~np.isin(yr, P['bad'][T]) & ok & y.notna() & (pos + param <= end_pos)
@@ -18,8 +19,8 @@ def final_r2(T, hname, kind, param, model_name, excl=True):
                target=T, kind=kind, param=param)
     mdl = [m for m in candidates(kind, param) if m.name == model_name][0]
     pred = mdl.fit_predict(ctx)
-    tm = (yr >= C.TEST_FROM) & ok & y.notna() & pred.notna()
-    return r2_score(y[tm], pred[tm]), int(tm.sum())
+    tm = (yr >= C.TEST_FROM) & ok & y_ev.notna() & pred.notna()
+    return r2_score(y_ev[tm], pred[tm]), int(tm.sum())
 
 if __name__ == '__main__':
     base = pd.read_csv(C.OUTPUT_DIR / 'proto2_baseline.csv')

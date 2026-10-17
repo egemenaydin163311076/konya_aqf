@@ -1,0 +1,12 @@
+hedef,ufuk,sampiyon,CV_R2,R2_test,MAE_test,R2_persist,n_test,target_src,scenario,sec
+karkent_pm10,t+24,gbm_level,0.3821,0.4723,22.733,0.0938,11336,xlsx,operational,53
+karkent_pm10,gunluk,gbm_level,0.6246,0.6969,14.567,0.1801,11371,xlsx,operational,52
+karkent_so2,t+24,gbm_level,0.2441,0.2627,3.539,-0.2721,11210,xlsx,operational,45
+karkent_so2,gunluk,gbm_level,0.5291,0.5317,2.032,-1.451,11287,xlsx,operational,44
+meram_pm10,t+24,gbm_level,0.2547,0.2586,18.52,-0.326,10698,xlsx,operational,43
+meram_pm10,gunluk,gbm_level,0.4814,0.5215,11.531,-0.5998,10755,xlsx,operational,46
+meram_so2,t+24,ridge_lags,0.2357,0.1024,9.663,0.4178,10939,xlsx,operational,35
+meram_so2,gunluk,ridge_lags,0.4686,0.354,7.216,0.5368,11016,xlsx,operational,31
+meram_co,t+24,gbm_level,0.3991,0.3914,327.286,0.092,11203,xlsx,operational,37
+meram_co,gunluk,ridge_lags,0.6206,0.6627,216.046,-0.0404,11230,xlsx,operational,31
+meram_co,t+6,gbm_level,0.5352,0.5025,285.809,-0.0683,11221,xlsx,operational,38

@@ -1,24 +1,54 @@
 """Kademeli doldurma (sadece GİRDİ için) + lag/rolling/takvim öznitelikleri."""
+import os
 import numpy as np
 import pandas as pd
 import config as C
 
+# Sensitivity arm only: AQF_TWO_SIDED_FILL=1 restores the earlier two-sided (non-causal) short-gap interpolation.
+TWO_SIDED = os.environ.get("AQF_TWO_SIDED_FILL", "0") == "1"
+
+
+def elapsed_gap(values):
+    """Number of consecutive missing hours up to and including each hour (past information only)."""
+    miss = values.isna().to_numpy()
+    out = np.zeros(len(miss), dtype=int)
+    run = 0
+    for k, m in enumerate(miss):
+        run = run + 1 if m else 0
+        out[k] = run
+    return pd.Series(out, index=values.index)
+
 
 def tiered_impute(values, gaphours, stat_mask):
-    """Arkadaşın şeması: kısa(<=6)=lineer, orta(7-24)=eğitim saat-medyanı,
-    uzun(>24)=eğitim genel medyanı. İstatistikler stat_mask (anomali yıllar hariç)."""
+    """Causal tiered filling for the INPUT matrix only. At each missing hour the fill depends on the
+    number of consecutive missing hours elapsed so far (never on the length of the whole gap):
+    <= SHORT_GAP: last observed value carried forward; <= MED_GAP: training hour-of-day median;
+    otherwise: training overall median. The argument `gaphours` is kept for compatibility and unused."""
+    if TWO_SIDED:
+        o = values.copy()
+        interp = values.interpolate('linear', limit_direction='both')
+        short = (gaphours > 0) & (gaphours <= C.SHORT_GAP)
+        o[short] = interp[short]
+        hod = pd.Series(values.index.hour, index=values.index)
+        hod_med = values[stat_mask].groupby(values.index[stat_mask].hour).median()
+        medium = (gaphours > C.SHORT_GAP) & (gaphours <= C.MED_GAP)
+        o[medium] = hod.map(hod_med)[medium]
+        gmed = values[stat_mask].median()
+        o[gaphours > C.MED_GAP] = gmed
+        return o.fillna(gmed)
     o = values.copy()
-    interp = values.interpolate('linear', limit_direction='both')
-    short = (gaphours > 0) & (gaphours <= C.SHORT_GAP)
-    o[short] = interp[short]
+    el = elapsed_gap(values)
+    ffill = values.ffill()
+    short = (el > 0) & (el <= C.SHORT_GAP)
+    o[short] = ffill[short]
 
     hod = pd.Series(values.index.hour, index=values.index)
     hod_med = values[stat_mask].groupby(values.index[stat_mask].hour).median()
-    medium = (gaphours > C.SHORT_GAP) & (gaphours <= C.MED_GAP)
+    medium = (el > C.SHORT_GAP) & (el <= C.MED_GAP)
     o[medium] = hod.map(hod_med)[medium]
 
     gmed = values[stat_mask].median()
-    o[gaphours > C.MED_GAP] = gmed
+    o[el > C.MED_GAP] = gmed
     return o.fillna(gmed)
 
 

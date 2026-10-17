@@ -19,10 +19,11 @@ def main():
         _, kind, param = hz[hn]; t0 = time.time()
         r = P2.run_cell(T, hn, kind, param, return_pred=True)
         Pp = P2.prepare_period(C.VAL_YEAR); idx = Pp['idx']; yr = Pp['yr']
-        y, anchor, tm, fm = r['y'], r['anchor'], r['test_mask'], r['fit_mask']
+        y, anchor, tm, fm = r['y'], r['anchor'], r['test_mask'], r['fit_mask']      # evaluation (raw) target and last observation
+        y_fit, anchor_fit = r['y_fit'], r['anchor_fit']                              # series used for fitting
         preds = {'champion': [r['pred']], 'persistence': [anchor.copy()]}
         X = P2.build_features(Pp['imp'], Pp['clean'], T)
-        ctx = dict(X=X, y=y, anchor=anchor, fit_mask=fm, index=idx, clean=Pp['clean'], imp=Pp['imp'],
+        ctx = dict(X=X, y=y_fit, anchor=anchor_fit, anchor_raw=anchor, fit_mask=fm, index=idx, clean=Pp['clean'], imp=Pp['imp'],
                    target=T, kind=kind, param=param)
         for m in candidates(kind, param):
             if m.name == 'ridge_lags': preds['ridge_lags'] = [m.fit_predict(ctx)]
@@ -30,14 +31,14 @@ def main():
         stat = (yr <= C.VAL_YEAR) & ~np.isin(yr, Pp['bad'][T])
         Zdf = Pp['imp'][cols].copy(); mu = Zdf[stat].mean(); sd = Zdf[stat].std() + 1e-9
         Z = np.hstack([((Zdf - mu) / sd).values, Pp['clean'][CAL6].values]).astype(np.float32)
-        delta = (y - anchor); dsd = float(delta[fm].std() + 1e-9); yd = (delta / dsd).fillna(0.0).values
+        delta = (y_fit - anchor_fit); dsd = float(delta[fm].std() + 1e-9); yd = (delta / dsd).fillna(0.0).values
         pos = np.arange(len(idx)); okp = pos >= L - 1
         fit_pos = pos[fm.values & okp]; all_pos = pos[okp]
         for s_ in range(a.seeds):
             res = B.sk_models(Z, yd, fit_pos, all_pos, 1000 + s_, L=L)
             for name, out in res.items():
                 full = pd.Series(np.nan, index=idx); full.iloc[all_pos] = out
-                preds.setdefault(name, []).append(anchor + dsd * full)
+                preds.setdefault(name, []).append(anchor_fit + dsd * full)
         ref_idx = y.index[tm.values]
         err_c = (y[ref_idx] - r['pred'][ref_idx]).values
         h_dm = 24 if kind == 'mean' else param

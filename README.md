@@ -1,154 +1,63 @@
-# Konya Hava Kalitesi Tahmin Sistemi (AQF)
+# Konya air quality forecasting (konya_aqf)
 
-Çok-istasyonlu, çok-kirleticili, **çok-ufuklu** hava kalitesi tahmin çatısı.
-Her `(kirletici × istasyon × ufuk)` için bir **model zoo** yarışır, doğrulama yılı (2024)
-R²'sine göre **şampiyon** seçilir, test (2025+) üzerinde raporlanır.
+Code and processed data for the manuscript "A Horizon-Aware and Leakage-Safe Machine Learning
+Framework for Operational Air Quality Forecasting: The Case of Konya".
+Archived release: https://doi.org/10.5281/zenodo.23426748
 
-## Hızlı başlangıç (VS Code)
+## Contents
+
+- `src/`, `config.py`, `run.py`: forecasting framework (model pool, features, targets, cross-validated selection).
+- `eswa_revision/`: scripts and result tables for the fold-wise preprocessing protocol reported in the manuscript.
+- `data/konya_clean_2stations.csv`: processed hourly series of the two anchor stations (Karkent and Meram), 2017-01-01 to 2026-04-29 (81,721 rows). Pollutant values are in ug/m3; SO2 and CO of Meram were converted from ppb with ug/m3 = ppb x molar weight / 24.45 (25 C, 1 atm; molar weights 64.066 for SO2 and 28.010 for CO).
+- `data/05_air_quality_7node_long.csv`: earlier long-format export of a seven-node subset, not used for the reported results.
+- `outputs/`: cached meteorological features (ERA5 and archived day-ahead forecasts) and earlier result tables.
+
+The raw hourly measurements belong to the national air quality monitoring network of the Republic of Turkiye Ministry of Environment, Urbanization and Climate Change and can be requested from that institution.
+
+## Environment
+
 ```bash
-python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-# config.py içindeki DATA_PATH'i kendi xlsx yoluna ayarla
-python run.py
-```
-Çıktılar `outputs/` altına yazılır: `champions.csv`, `champion_matrix.csv`, `leaderboard_full.csv`.
-
-## Proje yapısı
-```
-konya_aqf/
-├── config.py          # tüm sabitler: yollar, seriler, ufuklar, bölme, eşikler
-├── run.py             # giriş noktası
-├── src/
-│   ├── data.py        # ham xlsx -> temiz ızgara; birim çevrimi; winsor;
-│   │                  #   boşluk bayrakları; ANOMALİ YIL otomatik tespiti
-│   ├── features.py    # kademeli doldurma (sadece girdi) + lag/rolling/takvim
-│   ├── targets.py     # noktasal + ileri-ortalama hedefler (gözlem-maskeli)
-│   ├── models.py      # model zoo: persistence, seasonal_naive, climatology,
-│   │                  #   ridge_lags, gbm_delta, gbm_level
-│   └── pipeline.py    # yarış + şampiyon seçimi + metrikler
-└── outputs/
 ```
 
-## Tasarım ilkeleri (makale için kritik)
-- **Sızıntısızlık:** doldurma yalnızca *girdi* matrisini besler; metrik yalnızca
-  *gerçekten gözlenmiş* hedef satırlarında ölçülür. Winsor eşikleri ve impute
-  istatistikleri yalnızca eğitim penceresinden (≤2023), anomali yıllar hariç.
-- **Anomali yıl tespiti:** bir seri-yılı çok eksikse (>%70) veya yıllık medyanı
-  robust-z > 3.5 ile aykırıysa eğitim istatistiklerinden ve hedef eğitiminden
-  otomatik dışlanır (örn. Meram SO2 2023, Meram CO 2017-2019).
-- **Δ-modelleme:** kısa ufukta GBM, seviye yerine değişimi (y₍t+h₎ − yₜ) tahmin
-  eder → persistence'ı geçer.
+Do not install LightGBM or XGBoost. The code adds them to the model pool when they are present, and the reported results were obtained with scikit-learn HistGradientBoosting only.
 
-## Doğrulanmış sonuç (özet)
-| Ufuk | En iyi | Test R² |
-|------|--------|---------|
-| t+1 | karkent_pm10 / gbm_delta | **0.92** |
-| t+6 | karkent_pm10 / gbm_delta | 0.55 |
-| günlük | meram_so2 / ridge_lags | 0.62 |
-| aylık | karkent_pm10 / seasonal_naive | 0.37 |
+## Reproducing the reported tables
 
-PM kısa ufukta çok iyi; SO2/CO birkaç saatten sonra persistence-baskın; uzun ufuk
-forecasting'in tavanı düşük.
+Run every command from the repository root. Each experiment takes from a few seconds (weekly and monthly horizons) to several minutes (hourly and daily horizons) per target-horizon cell on one CPU core; the full baseline sweep takes roughly one to two hours on two cores.
 
-## İki hat
-**1. Forecasting** (`run.py`) — geçmişten geleceği tahmin. Kısa ufuk güçlü
-(Karkent PM10 t+1 = 0.92), uzun ufuk tavanı düşük.
+```bash
+export OMP_NUM_THREADS=1 PYTHONPATH=.:eswa_revision
 
-**2. Nowcasting** (`python -m src.nowcast`) — bir sensörün t anındaki değerini
-DİĞER sensörlerin t anındaki değerlerinden + kendi yakın geçmişinden yeniden-üretir.
-Çıktı `outputs/nowcast_results.csv`. Saatlik R² + günlük/haftalık/aylık kovalara göre R².
-Sanal sensör / boşluk-doldurma / QA-QC için; aynı zamanda AI-agent katmanının temeli.
+# Main results without meteorology, all targets and horizons (writes outputs/proto2_baseline.csv)
+python eswa_revision/proto2.py --scen baseline --workers 2
 
-Doğrulanmış nowcast (test 2025+):
-| Hedef | Saatlik | Günlük | Aylık |
-|-------|---------|--------|-------|
-| karkent_pm10 | 0.93 | 0.98 | 0.97 |
-| meram_so2 | 0.83 | 0.97 | 0.98 |
-| meram_co | 0.86 | 0.97 | 0.98 |
+# Persistence, seasonal-naive and climatology references for all targets and horizons
+python eswa_revision/refs2.py
 
-> Not: aylık R² yalnızca ~16 test ayı üzerinden (gösterge). Asıl sağlam zemin günlük.
-> Nowcasting "geleceği tahmin" değildir — mekânsal yeniden-üretimdir; ayrı çerçevelenmeli.
+# Meteorological comparison: ERA5 and operational day-ahead forecasts
+python eswa_revision/proto2.py --scen era5 --workers 2
+python eswa_revision/proto2.py --scen operational --workers 2
 
-## Sağlam seçim: zaman-serisi CV
-`python -m src.cv_select` — şampiyonu tek yıl yerine genişleyen-pencere foldları
-(val 2022/2023/2024) ortalamasıyla seçer; durağan olmayan serilerde test'e daha iyi
-genelleşir. Uzun ufukta (mean, k≥168) aday kümesi otomatik olarak **ekstrapole edebilen
-+ mevsimsel** modellere daralır (`ridge_lags`, `detrend_seasonal`, `climatology`,
-`seasonal_naive`), çünkü ağaç-seviye modelleri gelecekteki sürüklenmeyi ekstrapole edemez.
-Etki: Meram CO aylık −0.41 → **+0.52**, Karkent SO2 aylık −0.85 → **+0.28**.
-Ayrıca `data.py` her seri için `is_trending` bayrağı üretir.
+# Purge sensitivity: same protocol without purging (writes outputs/nopurge_*.csv)
+python eswa_revision/proto2.py --scen baseline --workers 2 --no-purge
 
-## İki hat — nihai özet (test 2025+, R²)
-| Hedef | FC saatlik | FC günlük | FC aylık | NC saatlik | NC günlük | NC aylık |
-|-------|-----------|-----------|----------|-----------|-----------|----------|
-| karkent_pm10 | 0.92 | 0.61 | 0.38 | 0.93 | 0.98 | 0.97 |
-| meram_so2 | 0.82 | 0.62 | – | 0.83 | 0.97 | 0.98 |
-| meram_co | 0.83 | 0.65 | 0.52 | 0.86 | 0.97 | 0.98 |
-| meram_pm10 | 0.60 | 0.42 | – | 0.67 | 0.93 | 0.87 |
-| karkent_so2 | 0.43 | 0.46 | 0.28 | 0.50 | 0.85 | 0.77 |
-
-FC = forecasting (geleceği tahmin), NC = nowcasting (eşzamanlı yeniden-üretim).
-Kısa ufuk → FC güçlü; uzun ufuk → NC hâkim. İki hat birbirini tamamlıyor.
-
-## Paralel yönlendirme: ForecastRouter (`src/router.py`)
-Senin vizyonun: her (hedef × ufuk) bağımsız bir pipeline, hepsi **paralel** koşar, her
-biri model zoo'sundan CV ile en iyi modeli seçer; sonuç bir **yönlendirme tablosu**,
-`predict()` ilgili ufkun şampiyonuna route eder.
-```python
-from src.router import ForecastRouter
-r = ForecastRouter().fit(parallel=True, max_workers=4)
-print(r.routing_table())          # ufuk -> seçilen model + skor
-r.predict('karkent_pm10', 't+1')  # şampiyonun tahmin serisi
-```
-Zoo: persistence, seasonal_naive, climatology, ridge_lags, gbm_delta/level,
-detrend_seasonal (+ kuruluysa xgb_delta/level).
-
-## Meteoroloji: akademik + operasyonel denge (`src/meteo.py`)
-İki kaynak, aynı değişkenler, iki senaryo — ikisi de raporlanır:
-- **ERA5 reanalizi** (`fetch('era5', ...)`) → **üst-sınır** ("hava bilinseydi" tavanı).
-- **Open-Meteo arşiv-tahmini** (`fetch('operational', ...)`) → **operasyonel**, sızıntısız,
-  sahadaki gerçek performans.
-- İkisinin **farkı = hava tahmini hatasının maliyeti** (yayınlanabilir bulgu).
-
-Sızıntı kuralı: hedef y₍t+h₎ için meteo, HEDEF zamandaki (t+h) havadır — operasyonelde
-"o an yapılmış tahmin", üst-sınırda reanaliz. `target_time_features()` bunu otomatik kurar.
-İlçe merkezleri: Karkent→Karatay (37.881, 32.521), Meram (37.872, 32.493) — `STATION_COORDS`.
-
-Kullanım (kendi makinende, ağ gerekli):
-```python
-from src.meteo import fetch_all_stations, meteo_features
-from src.router import ForecastRouter
-for src in ['era5', 'operational']:
-    raw = fetch_all_stations(src)            # cache -> outputs/meteo_*.csv
-    mf  = meteo_features(raw)
-    rt  = ForecastRouter(meteo_feats=mf).fit().routing_table()
-    rt.to_csv(f'outputs/routing_{src}.csv')  # iki senaryoyu kıyasla
+# Window-based baselines, anomalous-year and difference-parameterization ablation
+python eswa_revision/baselines2.py
+python eswa_revision/ablate2.py
 ```
 
-## Karar katmanı ve değerlendirme (makale-öncesi modüller)
+Under this protocol, anomalous-year detection, clipping thresholds and gap-filling statistics are learned within the training period of each cross-validation fold (2021 to 2022, 2022 to 2023, 2023 to 2024) and, for the final model, from the years up to 2024; training rows whose forward-looking target window crosses the training boundary are purged. The test period is 2025 onward.
 
-**WHO eşik-aşımı sınıflandırması** (`who_daily_forecast.py` → `outputs/who_classification.csv`):
-gün-ileri günlük tahminden WHO 2021 24-saat eşiklerine (PM10 45, SO2 40, NO2 25 µg/m³) göre
-aşım sınıflandırması; doğruluk + precision/recall/F1 + karışıklık matrisi + taban oran.
-Ortalama doğruluk **%86.6** (PM10 F1≈0.66-0.75, NO2 F1≈0.90). Not: Karkent SO2'de test
-döneminde hiç aşım yok (taban oran 0) → doğruluk 1.0 trivialdir, F1 anlamlıdır.
+The stored processed series was clipped before it was deposited. The anomalous-year check can therefore be rerun, but the separate effect of the clipping threshold on an anomalous year cannot be reproduced from this file.
 
-**AI-agent karar katmanı PoC** (`src/agent.py` → `outputs/agent_faultlog_*.csv`):
-- *Sensör arıza/sürüklenme tespiti:* hedefin kendi geçmişini KULLANMAYAN bağımsız mekânsal
-  nowcast ile gerçek ölçüm arasındaki artık; anlık ve sürekli (24s-ort, CUSUM benzeri) eşik.
-  Enjekte-arıza testi: +80 µg/m³ sürüklenme %89-93 yakalanır (büyük arızalar güvenilir;
-  ince sürüklenme hassasiyeti mekânsal yeniden-üretim hatasıyla sınırlı — namuslu PoC).
-- *Sanal sensör:* istasyon düştüğünde nowcast ile %100 kapsama (MAE ~19 µg/m³).
-- *WHO uyarısı:* ertesi-gün aşım alarmı (yukarıdaki sınıflandırma metrikleri).
+## Original pipeline
 
-**Meteo senaryo kıyaslaması** (`compare_meteo.py` → `outputs/meteo_karsilastirma.csv`):
-üç routing tablosunu (temel/era5/operational) birleştirir; `meteo_kazanc_era5` (teorik katkı),
-`meteo_kazanc_oper` (saha katkısı) ve `tahmin_maliyeti = R2(era5) − R2(operational)`
-("hava tahmini hatasının maliyeti") üretir.
+`python run.py` runs the earlier single-split pipeline (validation year 2024, test from 2025) and requires the raw xlsx file given by `DATA_PATH` in `config.py`.
 
-## Sıradaki adımlar
-- Meteoroloji çekip iki senaryoyu (üst-sınır vs operasyonel) raporlamak → günlük forecast'ı
-  persistence üstüne gerçekten taşımak.
-- Log dönüşümü + WHO aşım sınıflandırma kafası.
-- Bir ileri model (ST-GNN / TFT) — bayrak gemisi makale.
-- Nowcast + forecast'ı birleştiren AI-agent karar katmanı.
+## Final protocol and raw-target evaluation (eswa_revision)
+
+The scripts in `eswa_revision/` reproduce the tables and figures of the submitted manuscript. Place the raw workbook `Konya_İstasyonları_Saatlik_Veriler__2017-2025_.xlsx` in `data/` so that the evaluation targets are the unclipped observations; models are fitted on series clipped at the training 99.5th percentile. Without the workbook, `proto2.py` falls back to `data/konya_clean_2stations.csv`, whose values are already clipped, and prints a warning.
+
+Run order (see `eswa_revision/runall2.sh`): `proto2.py --scen baseline|era5|operational`, `refs2.py`, `alerts2.py`, `baselines2.py`, `ablate2.py`, `fill_audit.py`, `proto2.py --scen baseline --no-purge`, `nowcast2.py`, and finally `make_figs_final.py` for Figures 4 to 7. The result tables are stored as CSV files next to the scripts. The LSTM check reported in the manuscript was run under an earlier protocol and its code is not included.
