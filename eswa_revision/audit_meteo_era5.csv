@@ -1,8 +1,0 @@
-scenario,hedef,ufuk,champ_orig,test_orig,champ_purged,test_purged
-era5,karkent_pm10,t+24,gbm_level,0.5716,gbm_level,0.5759
-era5,karkent_pm10,gunluk,gbm_level,0.7773,gbm_level,0.7612
-era5,karkent_so2,t+24,gbm_level,0.2714,gbm_level,0.267
-era5,meram_pm10,t+24,gbm_level,0.2912,gbm_level,0.2975
-era5,meram_pm10,gunluk,gbm_level,0.5813,gbm_level,0.5906
-era5,meram_co,t+6,gbm_level,0.5109,gbm_level,0.5121
-era5,meram_so2,t+24,persistence,0.4176,persistence,0.4176
